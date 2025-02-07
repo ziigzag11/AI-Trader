@@ -11,16 +11,33 @@ class DataProcessor:
         self.base_features = ['open', 'high', 'low', 'close', 'volume']
 
     def process_data(self, df):
+        # Ensure we have enough data for our window sizes
+        if len(df) < 256:  # Minimum required length
+            raise ValueError(f"Not enough data points. Need at least 256, got {len(df)}")
+            
+        # Make copy to avoid modifying original data
         df = df.copy()
         
-        # Keep only base features
-        df = df[self.base_features]
+        # Sort by date if available
+        if 'timestamp' in df.columns:
+            df = df.sort_values('timestamp')
         
-        # Scale features
-        scaled_data = self.scaler.fit_transform(df)
-        df = pd.DataFrame(scaled_data, columns=self.base_features, index=df.index)
+        # Forward fill missing values
+        df = df.fillna(method='ffill')
         
-        return df.fillna(method='ffill')
+        # Ensure we have required columns
+        required_columns = ['open', 'high', 'low', 'close', 'volume']
+        for col in required_columns:
+            if col not in df.columns:
+                raise ValueError(f"Missing required column: {col}")
+        
+        # Remove any rows with NaN values
+        df = df.dropna()
+        
+        # Reset index after all processing
+        df = df.reset_index(drop=True)
+        
+        return df
 
     def add_technical_indicators(self, df):
         # Add basic technical indicators
